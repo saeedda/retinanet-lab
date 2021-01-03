@@ -7,11 +7,12 @@ so that one can easily connect or disconnect different FPN levels to test their 
 
 The easiest way to run the code is to use docker. Please refer to [Nvidia implementation of RetinaNet](https://github.com/NVIDIA/retinanet-examples)
 on how to use docker. Run the following command inside docker:
-
-    python retinanet/main.py infer  path-to-model.pth \
-                                    --images path-to-images \
-                                    --output path-to-detections.json \
-                                    --fpn-levels index-of-FPNs
+```
+python retinanet/main.py infer  path-to-model.pth \
+                                --images path-to-images \
+                                --output path-to-detections.json \
+                                --fpn-levels index-of-FPNs
+```
 
 Use the corresponding index according to this table:
 
@@ -20,41 +21,41 @@ Use the corresponding index according to this table:
 | Index | 0 | 1 | 2 | 3 | 4 |
 
 To draw the bounding boxes overlaid on input images and save them:  
-    
-    python retinanet/main.py show   --input-images path-to-input-images \
-                                    --annotations path-to-detections.json \
-                                    --output-images path-to-output-images \
-                                    --score minimum-score-to-draw \
-                                    --category-ids index-of-categories-to-draw
+```  
+python retinanet/main.py show   --input-images path-to-input-images \
+                                --annotations path-to-detections.json \
+                                --output-images path-to-output-images \
+                                --score minimum-score-to-draw \
+                                --category-ids index-of-categories-to-draw
+```
 
 For category-ids refer to COCO dataset.
 
 ## Examples:
 * Running with ResNet18FPN as backbone and using P3:
-
-
+```
     python retinanet/main.py infer  retinanet_rn18fpn.pth \
                                     --images path-to-images \
                                     --output detections.json \
                                     --fpn-levels 0
+```
 
 * Running with ResNet18FPN as backbone and using P3 and P4:
-
-
-    python retinanet/main.py infer  retinanet_rn18fpn.pth \
-                                    --images path-to-images \
-                                    --output detections.json \
-                                    --fpn-levels 0 1
+```
+python retinanet/main.py infer  retinanet_rn18fpn.pth \
+                                --images path-to-images \
+                                --output detections.json \
+                                --fpn-levels 0 1
+```
 
 * Draw bounding boxes in which score > 0.25 and category_id=2
-
-
-    python retinanet/main.py show   --input-images path-to-input-images \
-                                    --annotations detections.json \
-                                    --output-images path-to-output-images \
-                                    --score 0.25 \
-                                    --category-ids 2
-
+```
+python retinanet/main.py show   --input-images path-to-input-images \
+                                --annotations detections.json \
+                                --output-images path-to-output-images \
+                                --score 0.25 \
+                                --category-ids 2
+```
 
 ## Case study:
 Let's take the following image and see how different FPN levels, P3-P7, contribute in detecting cars (category_ids=2).
