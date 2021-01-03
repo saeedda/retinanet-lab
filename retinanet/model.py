@@ -120,7 +120,7 @@ class Model(nn.Module):
         if self.rotated_bbox:
             self.box_head[-1].apply(initialize_prior)
 
-    def forward(self, x, rotated_bbox=None):
+    def forward(self, x, rotated_bbox=None, fpn_levels=None):
         if self.training: x, targets = x
 
         # Backbones forward pass
@@ -129,6 +129,8 @@ class Model(nn.Module):
             features.extend(backbone(x))
 
         # Heads forward pass
+        if fpn_levels:
+            features = [features[i] for i in range(len(features)) if i in fpn_levels]
         cls_heads = [self.cls_head(t) for t in features]
         box_heads = [self.box_head(t) for t in features]
 

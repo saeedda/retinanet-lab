@@ -15,7 +15,7 @@ from .utils import Profiler, rotate_box
 
 
 def infer(model, path, detections_file, resize, max_size, batch_size, mixed_precision=True, is_master=True, world=0,
-          annotations=None, use_dali=True, is_validation=False, verbose=True, rotated_bbox=False):
+          annotations=None, use_dali=True, is_validation=False, verbose=True, rotated_bbox=False, fpn_levels=None):
     'Run inference on images from path'
 
     backend = 'pytorch' if isinstance(model, Model) or isinstance(model, DDP) else 'tensorrt'
@@ -71,7 +71,7 @@ def infer(model, path, detections_file, resize, max_size, batch_size, mixed_prec
         for i, (data, ids, ratios) in enumerate(data_iterator):
             # Forward pass
             profiler.start('fw')
-            scores, boxes, classes = model(data, rotated_bbox) #Need to add model size (B, 3, W, H)
+            scores, boxes, classes = model(data, rotated_bbox, fpn_levels) #Need to add model size (B, 3, W, H)
             profiler.stop('fw')
 
             results.append([scores, boxes, classes, ids, ratios])
@@ -104,6 +104,7 @@ def infer(model, path, detections_file, resize, max_size, batch_size, mixed_prec
         # Collect detections
         detections = []
         processed_ids = set()
+        ann_id = 0
         for scores, boxes, classes, image_id, ratios in zip(*results):
             image_id = image_id.item()
             if image_id in processed_ids:
@@ -132,9 +133,11 @@ def infer(model, path, detections_file, resize, max_size, batch_size, mixed_prec
                 if 'annotations' in data_iterator.coco.dataset:
                     cat = data_iterator.coco.getCatIds()[cat]
                 this_det = {
+                    'id': ann_id,
                     'image_id': image_id,
                     'score': score.item(),
                     'category_id': cat}
+                ann_id += 1
                 if rotated_bbox:
                     this_det['bbox'] = [x1, y1, x2 - x1 + 1, y2 - y1 + 1, theta]
                     this_det['segmentation'] = [seg]

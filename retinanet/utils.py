@@ -10,6 +10,8 @@ import requests
 import numpy as np
 import math
 import torch
+from pycocotools.coco import COCO
+
 
 def order_points(pts):
     pts_reorder = []
@@ -119,6 +121,32 @@ def show_detections(detections):
                       fill=(255, 255, 255, alpha))
         im = Image.alpha_composite(im, overlay)
         im.show()
+
+
+def save_detections_as_image(detections_filename, input_images_path, output_images_path, score_min=0, category_ids=None):
+    coco = COCO(detections_filename)
+    data = dict()
+    for image_id in coco.getImgIds():
+        image_file = coco.loadImgs(image_id)[0]['file_name']
+        ann_ids = coco.getAnnIds(image_id)
+        anns = coco.loadAnns(ann_ids)
+        data.update({image_file: anns})
+
+    for image_filename, detections in data.items():
+        image = Image.open(os.path.join(input_images_path, image_filename))
+        draw = ImageDraw.Draw(image)
+        for detection in detections:
+            if detection['score'] > score_min and (not category_ids or detection['category_id'] in category_ids):
+                box = detection['bbox']
+                # alpha = int(detection['score'] * 255)
+                box1 = ((box[0], box[1]), (box[0] + box[2], box[1] + box[3]))
+                draw.rectangle(box1, width=2, outline=(255, 0, 0))
+                draw.text((box[0] + 2, box[1]), '[{}]'.format(detection['category_id']),
+                          fill=(0, 0, 255))
+                draw.text((box[0] + 2, box[1] + 10), '{:.2}'.format(detection['score']),
+                          fill=(0, 0, 255))
+        im_det = os.path.join(output_images_path, os.path.splitext(image_filename)[0] + '_det.jpg')
+        image.save(im_det, "JPEG")
 
 
 def save_detections(path, detections):

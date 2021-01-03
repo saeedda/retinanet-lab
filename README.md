@@ -1,165 +1,89 @@
-# NVIDIA Object Detection Toolkit (ODTK)
+# RetinaNet-lab
 
-**Fast** and **accurate** single stage object detection with end-to-end GPU optimization.
+This repository provides an easy way to do experiments with RetinaNet object detector. RetinaNet uses Feature Pyramid
+Network (FPN) to deal with different object scales. There are 5 FPN levels, P3-P7, each level can detect objects with
+different scales. I have modified [Nvidia implementation of RetinaNet](https://github.com/NVIDIA/retinanet-examples)
+so that one can easily connect or disconnect different FPN levels to test their contribution in detecting objects.
 
-## Description
+The easiest way to run the code is to use docker. Please refer to [Nvidia implementation of RetinaNet](https://github.com/NVIDIA/retinanet-examples)
+on how to use docker. Run the following command inside docker:
 
-ODTK is a single shot object detector with various backbones and detection heads. This allows performance/accuracy trade-offs.
+    python retinanet/main.py infer  path-to-model.pth \
+                                    --images path-to-images \
+                                    --output path-to-detections.json \
+                                    --fpn-levels index-of-FPNs
 
-It is optimized for end-to-end GPU processing using:
-* The [PyTorch](https://pytorch.org) deep learning framework with [ONNX](https://onnx.ai) support
-* NVIDIA [Apex](https://github.com/NVIDIA/apex) for mixed precision and distributed training
-* NVIDIA [DALI](https://github.com/NVIDIA/DALI) for optimized data pre-processing
-* NVIDIA [TensorRT](https://developer.nvidia.com/tensorrt) for high-performance inference
-* NVIDIA [DeepStream](https://developer.nvidia.com/deepstream-sdk) for optimized real-time video streams support
+Use the corresponding index according to this table:
 
-## Rotated bounding box detections
+| FPN level |P3 | P4 | P5 | P6 | P7 |
+|---|---|---|---|---|---|
+| Index | 0 | 1 | 2 | 3 | 4 |
 
-This repo now supports rotated bounding box detections. See [rotated detections training](TRAINING.md#rotated-detections) and [rotated detections inference](INFERENCE.md#rotated-detections) documents for more information on how to use the `--rotated-bbox` command. 
+To draw the bounding boxes overlaid on input images and save them:  
+    
+    python retinanet/main.py show   --input-images path-to-input-images \
+                                    --annotations path-to-detections.json \
+                                    --output-images path-to-output-images \
+                                    --score minimum-score-to-draw \
+                                    --category-ids index-of-categories-to-draw
 
-Bounding box annotations are described by `[x, y, w, h, theta]`. 
+For category-ids refer to COCO dataset.
 
-## Performance
+## Examples:
+* Running with ResNet18FPN as backbone and using P3:
 
-The detection pipeline allows the user to select a specific backbone depending on the latency-accuracy trade-off preferred.
 
-ODTK **RetinaNet** model accuracy and inference latency & FPS (frames per seconds) for [COCO 2017](http://cocodataset.org/#detection-2017) (train/val) after full training schedule. Inference results include bounding boxes post-processing for a batch size of 1. Inference measured at `--resize 800` using `--with-dali` on a FP16 TensorRT engine.
+    python retinanet/main.py infer  retinanet_rn18fpn.pth \
+                                    --images path-to-images \
+                                    --output detections.json \
+                                    --fpn-levels 0
 
-Backbone |  mAP @[IoU=0.50:0.95] | Training Time on [DGX1v](https://www.nvidia.com/en-us/data-center/dgx-1/) | Inference latency FP16 on [V100](https://www.nvidia.com/en-us/data-center/tesla-v100/) | Inference latency INT8 on [T4](https://www.nvidia.com/en-us/data-center/tesla-t4/)
---- | :---: | :---: | :---: | :---:
-[ResNet18FPN](https://github.com/NVIDIA/retinanet-examples/releases/download/19.04/retinanet_rn18fpn.zip) | 0.318 | 5 hrs  | 14 ms; 71 FPS | 18 ms; 56 FPS
-[MobileNetV2FPN](https://github.com/NVIDIA/retinanet-examples/releases/download/v0.2.3/retinanet_mobilenetv2fpn.pth) | 0.333 | | 14 ms; 74 FPS | 18 ms; 56 FPS
-[ResNet34FPN](https://github.com/NVIDIA/retinanet-examples/releases/download/19.04/retinanet_rn34fpn.zip) | 0.343 | 6 hrs  | 16 ms; 64 FPS | 20 ms; 50 FPS
-[ResNet50FPN](https://github.com/NVIDIA/retinanet-examples/releases/download/19.04/retinanet_rn50fpn.zip) | 0.358 | 7 hrs  | 18 ms; 56 FPS | 22 ms; 45 FPS
-[ResNet101FPN](https://github.com/NVIDIA/retinanet-examples/releases/download/19.04/retinanet_rn101fpn.zip) | 0.376 | 10 hrs | 22 ms; 46 FPS | 27 ms; 37 FPS
-[ResNet152FPN](https://github.com/NVIDIA/retinanet-examples/releases/download/19.04/retinanet_rn152fpn.zip) | 0.393 | 12 hrs | 26 ms; 38 FPS | 33 ms; 31 FPS
+* Running with ResNet18FPN as backbone and using P3 and P4:
 
-## Installation
 
-For best performance, use the latest [PyTorch NGC docker container](https://ngc.nvidia.com/catalog/containers/nvidia:pytorch). Clone this repository, build and run your own image:
+    python retinanet/main.py infer  retinanet_rn18fpn.pth \
+                                    --images path-to-images \
+                                    --output detections.json \
+                                    --fpn-levels 0 1
 
-```bash
-git clone https://github.com/nvidia/retinanet-examples
-docker build -t odtk:latest retinanet-examples/
-docker run --gpus all --rm --ipc=host -it odtk:latest
-```
+* Draw bounding boxes in which score > 0.25 and category_id=2
 
-## Usage
 
-Training, inference, evaluation and model export can be done through the `odtk` utility. 
-For more details, including a list of parameters, please refer to the [TRAINING](TRAINING.md) and [INFERENCE](INFERENCE.md) documentation.
+    python retinanet/main.py show   --input-images path-to-input-images \
+                                    --annotations detections.json \
+                                    --output-images path-to-output-images \
+                                    --score 0.25 \
+                                    --category-ids 2
 
-### Training
 
-Train a detection model on [COCO 2017](http://cocodataset.org/#download) from pre-trained backbone:
-```bash
-odtk train retinanet_rn50fpn.pth --backbone ResNet50FPN \
-    --images /coco/images/train2017/ --annotations /coco/annotations/instances_train2017.json \
-    --val-images /coco/images/val2017/ --val-annotations /coco/annotations/instances_val2017.json
-```
+## Case study:
+Let's take the following image and see how different FPN levels, P3-P7, contribute in detecting cars (category_ids=2).
+Detections with score below 0.25 were filtered out.
 
-### Fine Tuning
+* Input image:
+  
+![input image](images/img00084.jpg)
 
-Fine-tune a pre-trained model on your dataset. In the example below we use [Pascal VOC](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html) with [JSON annotations](https://storage.googleapis.com/coco-dataset/external/PASCAL_VOC.zip):
-```bash
-odtk train model_mydataset.pth --backbone ResNet50FPN \
-    --fine-tune retinanet_rn50fpn.pth \
-    --classes 20 --iters 10000 --val-iters 1000 --lr 0.0005 \
-    --resize 512 --jitter 480 640 --images /voc/JPEGImages/ \
-    --annotations /voc/pascal_train2012.json --val-annotations /voc/pascal_val2012.json
-```
+* P3: This FPN level detects the smallest scales in an image. As you can see cars that are closer to the camera, and
+  thus appear big enough, are not detected by P3.
 
-Note: the shorter side of the input images will be resized to `resize` as long as the longer side doesn't get larger than `max-size`. During training, the images will be randomly randomly resized to a new size within the `jitter` range.
+![output image using P3](images/img00084_fpn0.jpg)
 
-### Inference
+* P4: Some smaller cars that are detected by P3 are missing here, and some new cars are detected. As we see some cars
+  are detected with both P3 and P4. 
 
-Evaluate your detection model on [COCO 2017](http://cocodataset.org/#download):
-```bash
-odtk infer retinanet_rn50fpn.pth --images /coco/images/val2017/ --annotations /coco/annotations/instances_val2017.json
-```
+![output image using P4](images/img00084_fpn1.jpg)
 
-Run inference on [your dataset](#datasets):
-```bash
-odtk infer retinanet_rn50fpn.pth --images /dataset/val --output detections.json
-```
+* P5: Here is similar observation as P4. 
 
-### Optimized Inference with TensorRT
+![output image using P5](images/img00084_fpn2.jpg)
 
-For faster inference, export the detection model to an optimized FP16 TensorRT engine:
-```bash
-odtk export model.pth engine.plan
-```
+* P6: As we see here, only the closest car to the camera (the biggest car in the image) is detected by P6.
 
-Evaluate the model with TensorRT backend on [COCO 2017](http://cocodataset.org/#download):
-```bash
-odtk infer engine.plan --images /coco/images/val2017/ --annotations /coco/annotations/instances_val2017.json
-```
+![output image using P6](images/img00084_fpn3.jpg)
 
-### INT8 Inference with TensorRT
+* P7: No car is detected by P7. The reason is that P7 is designed to detect really big objects and none of cars in this
+  image are big enough to be detected by P7. 
 
-For even faster inference, do INT8 calibration to create an optimized INT8 TensorRT engine:
-```bash
-odtk export model.pth engine.plan --int8 --calibration-images /coco/images/val2017/
-```
-This will create an INT8CalibrationTable file that can be used to create INT8 TensorRT engines for the same model later on without needing to do calibration.
+![output image using P7](images/img00084_fpn4.jpg)
 
-Or create an optimized INT8 TensorRT engine using a cached calibration table:
-```bash
-odtk export model.pth engine.plan --int8 --calibration-table /path/to/INT8CalibrationTable
-```
-
-## Datasets
-
-RetinaNet supports annotations in the [COCO JSON format](http://cocodataset.org/#format-data).
-When converting the annotations from your own dataset into JSON, the following entries are required:
-```
-{
-    "images": [{
-        "id" : int,
-        "file_name" : str
-    }],
-    "annotations": [{
-        "id" : int,
-        "image_id" : int, 
-        "category_id" : int,
-        "bbox" : [x, y, w, h]   # all floats
-        "area": float           # w * h. Required for validation scores
-        "iscrowd": 0            # Required for validation scores
-    }],
-    "categories": [{
-        "id" : int
-    ]}
-}
-```
-
-If using the `--rotated-bbox` flag for rotated detections, add an additional float `theta` to the annotations. To get validation scores you also need to fill the `segmentation` section.
-```
-        "bbox" : [x, y, w, h, theta]    # all floats, where theta is measured in radians anti-clockwise from the x-axis.
-        "segmentation" : [[x1, y1, x2, y2, x3, y3, x4, y4]]
-                                        # Required for validation scores.
-```
-
-## Disclaimer
-
-This is a research project, not an official NVIDIA product.
-
-## Jetpack compatibility
-
-This branch uses TensorRT 7. If you are training and inferring models using PyTorch, or are creating TensorRT engines on Tesla GPUs (eg V100, T4), then you should use this branch.
-
-If you wish to deploy your model to a Jetson device (eg - Jetson AGX Xavier) running Jetpack version 4.3, then you should use the `19.10` branch of this repo.
-
-## References
-
-- [Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002).
-  Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He, Piotr Dollár.
-  ICCV, 2017.
-- [Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour](https://arxiv.org/abs/1706.02677).
-  Priya Goyal, Piotr Dollár, Ross Girshick, Pieter Noordhuis, Lukasz Wesolowski, Aapo Kyrola, Andrew Tulloch, Yangqing Jia, Kaiming He.
-  June 2017.
-- [Feature Pyramid Networks for Object Detection](https://arxiv.org/abs/1612.03144).
-  Tsung-Yi Lin, Piotr Dollár, Ross Girshick, Kaiming He, Bharath Hariharan, Serge Belongie.
-  CVPR, 2017.
-- [Deep Residual Learning for Image Recognition](http://arxiv.org/abs/1512.03385).
-  Kaiming He, Xiangyu Zhang, Shaoqing Renm Jian Sun.
-  CVPR, 2016.

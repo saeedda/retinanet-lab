@@ -79,11 +79,15 @@ def parse(args):
 
     parser_infer = subparsers.add_parser('infer', help='run inference')
     parser_infer.add_argument('model', type=str, help='path to model')
+    parser_infer.add_argument('--fpn-levels', metavar='0 1', type=int, nargs='+',
+                              help='levels in feature pyramid network')
     parser_infer.add_argument('--images', metavar='path', type=str, help='path to images', default='.')
     parser_infer.add_argument('--annotations', metavar='annotations', type=str,
                               help='evaluate using provided annotations')
     parser_infer.add_argument('--output', metavar='file', type=str, help='save detections to specified JSON file',
                               default='detections.json')
+    parser_infer.add_argument('--output-images', metavar='path', type=str, help='path to save detections as images',
+                              default='.')
     parser_infer.add_argument('--batch', metavar='size', type=int, help='batch size', default=2 * devcount)
     parser_infer.add_argument('--resize', metavar='scale', type=int, help='resize to given size', default=800)
     parser_infer.add_argument('--max-size', metavar='max', type=int, help='maximum resizing size', default=1333)
@@ -91,6 +95,17 @@ def parse(args):
     parser_infer.add_argument('--full-precision', help='inference in full precision', action='store_true')
     parser_infer.add_argument('--rotated-bbox', help='inference using a rotated bounding box model',
                               action='store_true')
+
+    parser_infer = subparsers.add_parser('show', help='draw bounding boxes and save images')
+    parser_infer.add_argument('--input-images', metavar='path', type=str, help='path to images', default='.')
+    parser_infer.add_argument('--annotations', metavar='file', type=str, help='saved detections in a JSON file',
+                              default='detections.json')
+    parser_infer.add_argument('--output-images', metavar='path', type=str, help='path to save detections as images',
+                              default='.')
+    parser_infer.add_argument('--score', metavar='score', type=float, help='minimum score to draw bounding boxes',
+                              default=0)
+    parser_infer.add_argument('--category-ids', metavar='0 1', type=int, nargs='+',
+                              help='category ids to draw bounding boxes')
 
     parser_export = subparsers.add_parser('export', help='export a model into a TensorRT engine')
     parser_export.add_argument('model', type=str, help='path to model')
@@ -117,11 +132,14 @@ def parse(args):
 
 
 def load_model(args, verbose=False):
+    model = None
+    state = {}
+    if args.command == 'show':
+        return model, state
+
     if args.command != 'train' and not os.path.isfile(args.model):
         raise RuntimeError('Model file {} does not exist!'.format(args.model))
 
-    model = None
-    state = {}
     _, ext = os.path.splitext(args.model)
 
     if args.command == 'train' and (not os.path.exists(args.model) or args.override):
@@ -187,7 +205,11 @@ def worker(rank, args, world, model, state):
         infer.infer(model, args.images, args.output, args.resize, args.max_size, args.batch,
                     annotations=args.annotations, mixed_precision=not args.full_precision,
                     is_master=(rank == 0), world=world, use_dali=args.with_dali, verbose=(rank == 0),
-                    rotated_bbox=args.rotated_bbox)
+                    rotated_bbox=args.rotated_bbox, is_validation=True, fpn_levels=args.fpn_levels)
+
+    elif args.command == 'show':
+        utils.save_detections_as_image(args.annotations, args.input_images, args.output_images, args.score,
+                                       args.category_ids)
 
     elif args.command == 'export':
         onnx_only = args.export.split('.')[-1] == 'onnx'
