@@ -34,10 +34,10 @@ For category-ids refer to COCO dataset.
 ## Examples:
 * Running with ResNet18FPN as backbone and using P3:
 ```
-    python retinanet/main.py infer  retinanet_rn18fpn.pth \
-                                    --images path-to-images \
-                                    --output detections.json \
-                                    --fpn-levels 0
+python retinanet/main.py infer  retinanet_rn18fpn.pth \
+                                --images path-to-images \
+                                --output detections.json \
+                                --fpn-levels 0
 ```
 
 * Running with ResNet18FPN as backbone and using P3 and P4:
