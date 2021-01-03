@@ -13,6 +13,7 @@ data_tools
 .vscode
 *.jpg
 !tests/*.jpg
+!images/*.jpg
 *.pkl
 *.torch
 *.plan
